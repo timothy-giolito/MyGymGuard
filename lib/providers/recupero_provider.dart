@@ -1,6 +1,5 @@
-// lib/providers/recupero_provider.dart
-
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 // 1. Il modello dati
 class StatoMuscolo {
@@ -39,6 +38,30 @@ class RecuperoProvider extends ChangeNotifier {
   // Getter per leggere la lista dall'esterno
   List<StatoMuscolo> get muscoli => _muscoli;
 
+  RecuperoProvider() {
+    _caricaDatiSalvati();
+  }
+
+  void _caricaDatiSalvati() {
+    var box = Hive.box('myGymBox');
+    for (var muscolo in _muscoli) {
+      // Cerca il livello salvato usando il nome del muscolo come chiave
+      double? livelloSalvato = box.get('recupero_${muscolo.nome}');
+      if (livelloSalvato != null) {
+        muscolo.livelloRecupero = livelloSalvato;
+      }
+    }
+    notifyListeners();
+  }
+
+  // Metodo per scrivere sul database
+  void _salvaDatiSuDisco() {
+    var box = Hive.box('myGymBox');
+    for (var muscolo in _muscoli) {
+      box.put('recupero_${muscolo.nome}', muscolo.livelloRecupero);
+    }
+  } // <--- QUESTA È LA PARENTESI GRAFFA CHE MANCAVA!
+
   // 3. Metodo per simulare la fine di un allenamento
   void allenaMuscoli(List<String> nomiMuscoliAllenati) {
     for (var muscolo in _muscoli) {
@@ -48,6 +71,7 @@ class RecuperoProvider extends ChangeNotifier {
       }
     }
     // IMPORTANTE: Avvisa tutte le schermate in ascolto che i dati sono cambiati!
+    _salvaDatiSuDisco();
     notifyListeners();
   }
 
@@ -59,6 +83,7 @@ class RecuperoProvider extends ChangeNotifier {
         if (muscolo.livelloRecupero > 1.0) muscolo.livelloRecupero = 1.0;
       }
     }
+    _salvaDatiSuDisco();
     notifyListeners();
   }
 }

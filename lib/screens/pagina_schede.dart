@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../providers/recupero_provider.dart';
 
@@ -12,7 +13,7 @@ class SchedaAllenamento {
   final String percorsoFile;
   final bool isImage; // true se è una foto, false se è un PDF
   final List<String>
-  muscoliCoinvolti; // 2. NUOVO: Lista dei muscoli che questa scheda allena
+  muscoliCoinvolti; // Lista dei muscoli che questa scheda allena
 
   SchedaAllenamento({
     required this.nome,
@@ -20,6 +21,27 @@ class SchedaAllenamento {
     required this.isImage,
     required this.muscoliCoinvolti,
   });
+
+  // Converte l'oggetto in una Mappa per salvarlo nel database
+  Map<String, dynamic> toMap() {
+    return {
+      'nome': nome,
+      'percorsoFile': percorsoFile,
+      'isImage': isImage,
+      'muscoliCoinvolti': muscoliCoinvolti,
+    };
+  }
+
+  // Ricostruisce l'oggetto leggendo la Mappa dal database
+  factory SchedaAllenamento.fromMap(Map<dynamic, dynamic> map) {
+    return SchedaAllenamento(
+      nome: map['nome'],
+      percorsoFile: map['percorsoFile'],
+      isImage: map['isImage'],
+      // Hive salva le liste come dynamic, dobbiamo specificare che sono Stringhe
+      muscoliCoinvolti: List<String>.from(map['muscoliCoinvolti'] ?? []),
+    );
+  }
 }
 
 class PaginaSchede extends StatefulWidget {
@@ -30,7 +52,8 @@ class PaginaSchede extends StatefulWidget {
 }
 
 class _PaginaSchedeState extends State<PaginaSchede> {
-  final List<SchedaAllenamento> _mieSchede = [];
+  // Rimosso "final" per poter caricare la lista all'avvio
+  List<SchedaAllenamento> _mieSchede = [];
   final ImagePicker _picker = ImagePicker();
 
   // I muscoli disponibili (devono coincidere con i nomi nel tuo RecuperoProvider)
@@ -44,6 +67,34 @@ class _PaginaSchedeState extends State<PaginaSchede> {
     'Tricipiti',
     'Addominali',
   ];
+
+  // Appena la pagina viene creata, carica le schede salvate
+  @override
+  void initState() {
+    super.initState();
+    _caricaSchedeDalDatabase();
+  }
+
+  // Metodo per leggere le schede dal database
+  void _caricaSchedeDalDatabase() {
+    var box = Hive.box('myGymBox');
+    List? schedeSalvate = box.get('lista_schede');
+
+    if (schedeSalvate != null) {
+      setState(() {
+        _mieSchede = schedeSalvate
+            .map((mappa) => SchedaAllenamento.fromMap(mappa))
+            .toList();
+      });
+    }
+  }
+
+  // Metodo per salvare l'intera lista nel database
+  void _salvaSchedeNelDatabase() {
+    var box = Hive.box('myGymBox');
+    List schedeDaSalvare = _mieSchede.map((scheda) => scheda.toMap()).toList();
+    box.put('lista_schede', schedeDaSalvare);
+  }
 
   void _aggiungiScheda(
     String nome,
@@ -61,6 +112,8 @@ class _PaginaSchedeState extends State<PaginaSchede> {
         ),
       );
     });
+    // Salva nel database ogni volta che aggiungiamo una nuova scheda!
+    _salvaSchedeNelDatabase();
   }
 
   void _mostraDialogoCaricamento() {
@@ -92,7 +145,7 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
-                  // 3. SELEZIONE MUSCOLI: Creiamo dei "chip" cliccabili
+                  // SELEZIONE MUSCOLI: Creiamo dei "chip" cliccabili
                   Wrap(
                     spacing: 8.0,
                     children: _tuttiIMuscoli.map((muscolo) {
@@ -184,7 +237,7 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                         : scheda.muscoliCoinvolti.join(', '),
                     style: const TextStyle(fontSize: 12),
                   ),
-                  // 4. BOTTONE COMPLETA ALLENAMENTO
+                  // BOTTONE COMPLETA ALLENAMENTO
                   trailing: IconButton(
                     icon: const Icon(
                       Icons.check_circle_outline,
@@ -211,7 +264,7 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                       );
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text(
                             'Allenamento completato! Heatmap aggiornata.',
                           ),
