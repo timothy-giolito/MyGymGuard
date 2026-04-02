@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() {
   runApp(const MyGymGuardApp());
@@ -16,12 +17,26 @@ class MyGymGuardApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'My Gym Guard',
-      // Scegliamo un tema scuro o chiaro. Qui usiamo un blu sportivo!
+      debugShowCheckedModeBanner: false,
+
+      // --- NUOVO BLOCCO: IMPOSTAZIONI LINGUA ITALIANA ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('it', 'IT'), // Diciamo a Flutter che supportiamo l'italiano
+      ],
+
+      // ---------------------------------------------------
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          primary: Colors.blue,
+        ),
         useMaterial3: true,
       ),
-      // Impostiamo la pagina iniziale
       home: const MainScreen(),
     );
   }
