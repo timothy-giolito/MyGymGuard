@@ -1,122 +1,238 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MyGymGuardApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Questa è la classe principale della tua applicazione
+class MyGymGuardApp extends StatelessWidget {
+  const MyGymGuardApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'My Gym Guard',
+      // Scegliamo un tema scuro o chiaro. Qui usiamo un blu sportivo!
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      // Impostiamo la pagina iniziale
+      home: const MainScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// Questa schermata gestirà la navigazione tra le 3 funzioni principali
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MainScreenState extends State<MainScreen> {
+  // Questa variabile tiene traccia di quale pagina stiamo guardando (0, 1 o 2)
+  int _indiceAttuale = 0;
 
-  void _incrementCounter() {
+  // Questa è una lista delle nostre 3 pagine (per ora sono solo testi centrati)
+  final List<Widget> _pagine = [
+    const PaginaAbbonamento(),
+    const PaginaTimer(),
+    const PaginaSchede(),
+  ];
+
+  // Funzione che cambia la pagina quando tocchi un'icona
+  void _cambiaPagina(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _indiceAttuale = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
+        title: const Text('My Gym Guard'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      // Mostriamo la pagina corrispondente all'indice attuale
+      body: _pagine[_indiceAttuale],
+
+      // La barra di navigazione in basso
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _indiceAttuale,
+        onTap: _cambiaPagina, // Chiama la funzione quando tocchi un'icona
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Abbonamento',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Timer'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Schede'),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Qui definiamo le tre schermate "segnaposto" ---
+
+class PaginaAbbonamento extends StatefulWidget {
+  const PaginaAbbonamento({super.key});
+
+  @override
+  State<PaginaAbbonamento> createState() => _PaginaAbbonamentoState();
+}
+
+class _PaginaAbbonamentoState extends State<PaginaAbbonamento> {
+  // Queste variabili salvano le date. "DateTime?" col punto interrogativo
+  // significa che all'inizio possono essere vuote (null).
+  DateTime? _dataPagamento;
+  DateTime? _dataScadenza;
+  int _giorniRimanenti = 0;
+
+  // Funzione per mostrare il calendario a schermo
+  Future<void> _selezionaData(BuildContext context) async {
+    final DateTime? dataSelezionata = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(), // Parte da oggi
+      firstDate: DateTime(2024), // Non si può andare prima del 2024
+      lastDate: DateTime(2030), // Arriva fino al 2030
+    );
+
+    // Se l'utente ha scelto una data e ha premuto "OK"
+    if (dataSelezionata != null) {
+      // setState dice all'app di ricaricare lo schermo con i nuovi dati
+      setState(() {
+        _dataPagamento = dataSelezionata;
+        _calcolaScadenza();
+      });
+    }
+  }
+
+  // Funzione che fa i calcoli matematici
+  void _calcolaScadenza() {
+    if (_dataPagamento == null) return;
+
+    // 1. Calcola la scadenza aggiungendo 4 settimane (28 giorni solari)
+    _dataScadenza = _dataPagamento!.add(const Duration(days: 28));
+
+    // 2. Calcola i giorni utili rimanenti (da oggi alla scadenza)
+    DateTime oggi = DateTime.now();
+    // Resettiamo l'orario a mezzanotte per non sballare i calcoli
+    oggi = DateTime(oggi.year, oggi.month, oggi.day);
+    DateTime scadenza = DateTime(
+      _dataScadenza!.year,
+      _dataScadenza!.month,
+      _dataScadenza!.day,
+    );
+
+    int giorni = 0;
+    DateTime dataCorrente = oggi;
+
+    // Contiamo un giorno alla volta fino alla scadenza
+    while (dataCorrente.isBefore(scadenza)) {
+      // Se NON è Sabato (6) e NON è Domenica (7), aggiungi un giorno utile
+      if (dataCorrente.weekday != DateTime.saturday &&
+          dataCorrente.weekday != DateTime.sunday) {
+        giorni++;
+      }
+      // Passa al giorno successivo
+      dataCorrente = dataCorrente.add(const Duration(days: 1));
+    }
+
+    // Se l'abbonamento è scaduto (giorni negativi), impostiamo a 0
+    _giorniRimanenti = giorni < 0 ? 0 : giorni;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            const Icon(Icons.fitness_center, size: 80, color: Colors.blue),
+            const SizedBox(height: 20),
+            const Text(
+              'Il Tuo Abbonamento',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+
+            // Testo che mostra la data di pagamento (se presente)
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              _dataPagamento == null
+                  ? 'Nessun pagamento registrato.'
+                  : 'Data Pagamento: ${_dataPagamento!.day}/${_dataPagamento!.month}/${_dataPagamento!.year}',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+
+            // Testo che mostra la scadenza (appare solo se è stata scelta una data)
+            if (_dataScadenza != null)
+              Text(
+                'Scadenza: ${_dataScadenza!.day}/${_dataScadenza!.month}/${_dataScadenza!.year}',
+                style: const TextStyle(fontSize: 16, color: Colors.red),
+              ),
+
+            const SizedBox(height: 20),
+
+            // Il riquadro che mostra i giorni rimanenti (esclusi i weekend)
+            if (_dataScadenza != null)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Giorni d\'allenamento rimanenti\n(esclusi sab e dom): $_giorniRimanenti',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+            const SizedBox(height: 40),
+
+            // Il bottone magico per aprire il calendario
+            ElevatedButton.icon(
+              onPressed: () => _selezionaData(context),
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('Inserisci data di pagamento'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
     );
+  }
+}
+
+class PaginaTimer extends StatelessWidget {
+  const PaginaTimer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Qui metteremo il timer di recupero!'));
+  }
+}
+
+class PaginaSchede extends StatelessWidget {
+  const PaginaSchede({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Qui gestiremo le schede di allenamento!'));
   }
 }
