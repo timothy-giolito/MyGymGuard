@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'providers/recupero_provider.dart';
 
 import 'screens/main_screen.dart';
 
 void main() {
-  runApp(const MyGymGuardApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => RecuperoProvider(),
+      child: const MyGymGuardApp(),
+    ),
+  );
 }
 
 class MyGymGuardApp extends StatelessWidget {

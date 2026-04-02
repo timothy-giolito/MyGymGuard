@@ -1,53 +1,19 @@
+// lib/screens/pagina_heatmap.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+// Importa il provider
+import '../providers/recupero_provider.dart';
 
-// 1. Definiamo il modello dati per lo stato del muscolo
-class StatoMuscolo {
-  final String nome;
-  double livelloRecupero; // Da 0.0 (distrutto) a 1.0 (completamente fresco)
-
-  StatoMuscolo({required this.nome, required this.livelloRecupero});
-
-  // Logica per assegnare il colore in base al recupero
-  Color get coloreStato {
-    if (livelloRecupero <= 0.3) return Colors.redAccent; // Affaticato
-    if (livelloRecupero <= 0.7) return Colors.orangeAccent; // In recupero
-    return Colors.green; // Fresco
-  }
-
-  // Etichetta testuale
-  String get testoStato {
-    if (livelloRecupero <= 0.3) return "Affaticato";
-    if (livelloRecupero <= 0.7) return "In Recupero";
-    return "Pronto";
-  }
-}
-
-class PaginaHeatmap extends StatefulWidget {
+class PaginaHeatmap extends StatelessWidget {
   const PaginaHeatmap({super.key});
 
   @override
-  State<PaginaHeatmap> createState() => _PaginaHeatmapState();
-}
-
-class _PaginaHeatmapState extends State<PaginaHeatmap> {
-  // 2. Creiamo una lista fittizia di muscoli per testare la UI
-  // In futuro, questi dati verranno aggiornati quando salvi un allenamento
-  final List<StatoMuscolo> _muscoli = [
-    StatoMuscolo(
-      nome: 'Pettorali',
-      livelloRecupero: 0.2,
-    ), // Allenati di recente
-    StatoMuscolo(nome: 'Dorsali', livelloRecupero: 0.8),
-    StatoMuscolo(nome: 'Quadricipiti', livelloRecupero: 0.5),
-    StatoMuscolo(nome: 'Femorali', livelloRecupero: 0.9),
-    StatoMuscolo(nome: 'Spalle', livelloRecupero: 1.0), // Freschissime
-    StatoMuscolo(nome: 'Bicipiti', livelloRecupero: 0.3),
-    StatoMuscolo(nome: 'Tricipiti', livelloRecupero: 0.2),
-    StatoMuscolo(nome: 'Addominali', livelloRecupero: 0.6),
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    // 1. Ci mettiamo in "ascolto" del provider
+    // context.watch farà ricostruire questa pagina ogni volta che chiami notifyListeners() nel provider
+    final recuperoData = context.watch<RecuperoProvider>();
+    final muscoli = recuperoData.muscoli;
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -64,18 +30,18 @@ class _PaginaHeatmapState extends State<PaginaHeatmap> {
             ),
             const SizedBox(height: 20),
 
-            // 3. Griglia visiva (la nostra Heatmap logica)
+            // Griglia visiva
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 2 colonne
+                  crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.5, // Proporzione larghezza/altezza
+                  childAspectRatio: 2.5,
                 ),
-                itemCount: _muscoli.length,
+                itemCount: muscoli.length,
                 itemBuilder: (context, index) {
-                  final muscolo = _muscoli[index];
+                  final muscolo = muscoli[index];
                   return Container(
                     decoration: BoxDecoration(
                       color: muscolo.coloreStato.withOpacity(0.2),
@@ -120,6 +86,40 @@ class _PaginaHeatmapState extends State<PaginaHeatmap> {
                 },
               ),
             ),
+
+            // 2. Bottoni per simulare le azioni
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.fitness_center),
+                  label: const Text("Allena Petto e Tricipiti"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    // context.read serve per ESEGUIRE un'azione senza ascoltare (ideale per i bottoni)
+                    context.read<RecuperoProvider>().allenaMuscoli([
+                      'Pettorali',
+                      'Tricipiti',
+                    ]);
+                  },
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.bedtime),
+                  label: const Text("+1 Giorno"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    context.read<RecuperoProvider>().avanzaGiorno();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
