@@ -1,137 +1,185 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../providers/abbonamento_provider.dart';
 
-class PaginaAbbonamento extends StatefulWidget {
+class PaginaAbbonamento extends StatelessWidget {
   const PaginaAbbonamento({super.key});
 
-  @override
-  State<PaginaAbbonamento> createState() => _PaginaAbbonamentoState();
-}
+  // Funzione che apre il popup per registrare il pagamento
+  void _mostraDialogoPagamento(BuildContext context) {
+    // Valori iniziali quando apri il popup
+    DateTime dataSelezionata = DateTime.now();
+    int mesiSelezionati = 1;
 
-class _PaginaAbbonamentoState extends State<PaginaAbbonamento> {
-  // Queste variabili salvano le date. "DateTime?" col punto interrogativo
-  // significa che all'inizio possono essere vuote (null).
-  DateTime? _dataPagamento;
-  DateTime? _dataScadenza;
-  int _giorniRimanenti = 0;
-
-  // Funzione per mostrare il calendario a schermo
-  Future<void> _selezionaData(BuildContext context) async {
-    final DateTime? dataSelezionata = await showDatePicker(
+    showDialog(
       context: context,
-      initialDate: DateTime.now(), // Parte da oggi
-      firstDate: DateTime(2024), // Non si può andare prima del 2024
-      lastDate: DateTime(2030), // Arriva fino al 2030
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Registra Pagamento'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Quando hai pagato l'abbonamento?"),
+                const SizedBox(height: 8),
+                // Selettore della data
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    DateFormat('dd/MM/yyyy').format(dataSelezionata),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: const Icon(
+                    Icons.calendar_today,
+                    color: Colors.deepPurple,
+                  ),
+                  onTap: () async {
+                    DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: dataSelezionata,
+                      firstDate: DateTime(
+                        2020,
+                      ), // Puoi inserire pagamenti vecchi
+                      lastDate: DateTime.now(), // Fino ad oggi
+                    );
+                    if (picked != null) {
+                      setStateDialog(() {
+                        dataSelezionata = picked;
+                      });
+                    }
+                  },
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                // Selettore della durata
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Durata:"),
+                    DropdownButton<int>(
+                      value: mesiSelezionati,
+                      items: [1, 3, 6, 12].map((int value) {
+                        return DropdownMenuItem<int>(
+                          value: value,
+                          child: Text("$value ${value == 1 ? 'mese' : 'mesi'}"),
+                        );
+                      }).toList(),
+                      onChanged: (int? newValue) {
+                        if (newValue != null) {
+                          setStateDialog(() {
+                            mesiSelezionati = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annulla'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Salviamo i dati nel Provider!
+                  context.read<AbbonamentoProvider>().registraPagamento(
+                    dataSelezionata,
+                    mesiSelezionati,
+                  );
+                  Navigator.pop(context); // Chiude il popup
+                },
+                child: const Text('Salva'),
+              ),
+            ],
+          );
+        },
+      ),
     );
-
-    // Se l'utente ha scelto una data e ha premuto "OK"
-    if (dataSelezionata != null) {
-      // setState dice all'app di ricaricare lo schermo con i nuovi dati
-      setState(() {
-        _dataPagamento = dataSelezionata;
-        _calcolaScadenza();
-      });
-    }
-  }
-
-  // Funzione che fa i calcoli matematici
-  void _calcolaScadenza() {
-    if (_dataPagamento == null) return;
-
-    // 1. Calcola la scadenza aggiungendo 4 settimane (28 giorni solari)
-    _dataScadenza = _dataPagamento!.add(const Duration(days: 28));
-
-    // 2. Calcola i giorni utili rimanenti (da oggi alla scadenza)
-    DateTime oggi = DateTime.now();
-    // Resettiamo l'orario a mezzanotte per non sballare i calcoli
-    oggi = DateTime(oggi.year, oggi.month, oggi.day);
-    DateTime scadenza = DateTime(
-      _dataScadenza!.year,
-      _dataScadenza!.month,
-      _dataScadenza!.day,
-    );
-
-    int giorni = 0;
-    DateTime dataCorrente = oggi;
-
-    // Contiamo un giorno alla volta fino alla scadenza
-    while (dataCorrente.isBefore(scadenza)) {
-      // Se NON è Sabato (6) e NON è Domenica (7), aggiungi un giorno utile
-      if (dataCorrente.weekday != DateTime.saturday &&
-          dataCorrente.weekday != DateTime.sunday) {
-        giorni++;
-      }
-      // Passa al giorno successivo
-      dataCorrente = dataCorrente.add(const Duration(days: 1));
-    }
-
-    // Se l'abbonamento è scaduto (giorni negativi), impostiamo a 0
-    _giorniRimanenti = giorni < 0 ? 0 : giorni;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+    final abbProvider = context.watch<AbbonamentoProvider>();
+    final scadenza = abbProvider.dataScadenza;
+    final pagamento = abbProvider.dataPagamento;
+
+    // Definiamo un colore e un messaggio per lo stato attuale
+    Color coloreStato = Colors.redAccent;
+    String testoStato = "Abbonamento Scaduto";
+    IconData iconaStato = Icons.card_membership;
+
+    if (abbProvider.isAttivo) {
+      if (abbProvider.possoEntrareOggi) {
+        coloreStato = Colors.green;
+        testoStato = "Accesso Consentito Oggi";
+        iconaStato = Icons.check_circle;
+      } else {
+        coloreStato = Colors.orange;
+        testoStato = "Oggi Non Puoi Accedere\n(Solo Lun-Ven)";
+        iconaStato = Icons.lock_clock;
+      }
+    }
+
+    return Scaffold(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.fitness_center, size: 80, color: Colors.blue),
+            Icon(iconaStato, size: 100, color: coloreStato),
             const SizedBox(height: 20),
-            const Text(
-              'Il Tuo Abbonamento',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-
-            // Testo che mostra la data di pagamento (se presente)
             Text(
-              _dataPagamento == null
-                  ? 'Nessun pagamento registrato.'
-                  : 'Data Pagamento: ${_dataPagamento!.day}/${_dataPagamento!.month}/${_dataPagamento!.year}',
-              style: const TextStyle(fontSize: 16),
+              testoStato,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: coloreStato,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
 
-            // Testo che mostra la scadenza (appare solo se è stata scelta una data)
-            if (_dataScadenza != null)
+            // Dettagli delle date
+            if (pagamento != null) ...[
               Text(
-                'Scadenza: ${_dataScadenza!.day}/${_dataScadenza!.month}/${_dataScadenza!.year}',
-                style: const TextStyle(fontSize: 16, color: Colors.red),
+                "Ultimo pagamento: ${DateFormat('dd/MM/yyyy').format(pagamento)}",
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
-
-            const SizedBox(height: 20),
-
-            // Il riquadro che mostra i giorni rimanenti (esclusi i weekend)
-            if (_dataScadenza != null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Giorni d\'allenamento rimanenti\n(esclusi sab e dom): $_giorniRimanenti',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+              const SizedBox(height: 5),
+              Text(
+                "Scade il: ${DateFormat('dd/MM/yyyy').format(scadenza!)}",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 5),
+              Text(
+                "Giorni utili rimanenti (Lun-Ven): ${abbProvider.giorniRimanenti}",
+                style: const TextStyle(fontSize: 16),
+              ),
+            ] else ...[
+              const Text(
+                "Nessun pagamento registrato",
+                style: TextStyle(fontSize: 18),
+              ),
+            ],
 
             const SizedBox(height: 40),
 
-            // Il bottone magico per aprire il calendario
+            // Bottone che apre il popup
             ElevatedButton.icon(
-              onPressed: () => _selezionaData(context),
-              icon: const Icon(Icons.calendar_month),
-              label: const Text('Inserisci data di pagamento'),
+              onPressed: () => _mostraDialogoPagamento(context),
+              icon: const Icon(Icons.payment),
+              label: const Text("Registra Pagamento"),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 15,
+                  vertical: 12,
                 ),
+                textStyle: const TextStyle(fontSize: 16),
               ),
             ),
           ],

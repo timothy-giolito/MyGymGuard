@@ -5,16 +5,20 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'providers/recupero_provider.dart';
 import 'screens/main_screen.dart';
+import 'providers/abbonamento_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await Hive.initFlutter();
   await Hive.openBox('myGymBox');
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => RecuperoProvider(),
+    // Usiamo MultiProvider per gestire più "cervelli" nell'app
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => RecuperoProvider()),
+        ChangeNotifierProvider(create: (context) => AbbonamentoProvider()),
+      ],
       child: const MyGymGuardApp(),
     ),
   );
