@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:open_filex/open_filex.dart';
 
-// 1. IMPORTA IL PROVIDER
 import '../providers/recupero_provider.dart';
 
 // Modello dati per la singola scheda
@@ -220,11 +220,21 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                       );
                     },
                   ),
-                  onTap: () {
-                    // Qui in futuro aggiungeremo la funzione per APRIRE e vedere il file
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Apertura di: ${scheda.nome}')),
-                    );
+                  onTap: () async {
+                    // Chiediamo al sistema operativo di aprire il file
+                    final result = await OpenFilex.open(scheda.percorsoFile);
+
+                    // Se qualcosa va storto (es. l'utente ha cancellato il file dalla galleria)
+                    if (result.type != ResultType.done && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Impossibile aprire il file: ${result.message}',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                 );
               },
