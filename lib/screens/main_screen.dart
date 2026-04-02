@@ -1,11 +1,8 @@
-// lib/screens/main_screen.dart
-
 import 'package:flutter/material.dart';
-
-// Qui "importiamo" le nostre altre pagine per poterle usare
 import 'pagina_abbonamento.dart';
 import 'pagina_timer.dart';
 import 'pagina_schede.dart';
+import 'pagina_heatmap.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,6 +20,7 @@ class _MainScreenState extends State<MainScreen> {
     const PaginaAbbonamento(),
     const PaginaTimer(),
     const PaginaSchede(),
+    const PaginaHeatmap(),
   ];
 
   // Funzione che cambia la pagina quando tocchi un'icona
@@ -46,6 +44,7 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceAttuale,
         onTap: _cambiaPagina, // Chiama la funzione quando tocchi un'icona
+        type: BottomNavigationBarType.fixed, // Per mostrare tutte le icone
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
@@ -53,6 +52,10 @@ class _MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Timer'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Schede'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.accessibility_new),
+            label: 'Heatmap',
+          ),
         ],
       ),
     );
