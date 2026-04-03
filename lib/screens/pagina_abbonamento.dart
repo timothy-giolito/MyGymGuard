@@ -11,6 +11,10 @@ class PaginaAbbonamento extends StatelessWidget {
     // Valori iniziali quando apri il popup
     DateTime dataSelezionata = DateTime.now();
     int mesiSelezionati = 1;
+    // Impostiamo il tipo iniziale leggendolo dal provider (o feriale come default)
+    TipoAbbonamento tipoSelezionato = context
+        .read<AbbonamentoProvider>()
+        .tipoAbbonamento;
 
     showDialog(
       context: context,
@@ -18,64 +22,93 @@ class PaginaAbbonamento extends StatelessWidget {
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: const Text('Registra Pagamento'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Quando hai pagato l'abbonamento?"),
-                const SizedBox(height: 8),
-                // Selettore della data
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    DateFormat('dd/MM/yyyy').format(dataSelezionata),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: const Icon(
-                    Icons.calendar_today,
-                    color: Colors.deepPurple,
-                  ),
-                  onTap: () async {
-                    DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: dataSelezionata,
-                      firstDate: DateTime(
-                        2020,
-                      ), // Puoi inserire pagamenti vecchi
-                      lastDate: DateTime.now(), // Fino ad oggi
-                    );
-                    if (picked != null) {
-                      setStateDialog(() {
-                        dataSelezionata = picked;
-                      });
-                    }
-                  },
-                ),
-                const Divider(),
-                const SizedBox(height: 8),
-                // Selettore della durata
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("Durata:"),
-                    DropdownButton<int>(
-                      value: mesiSelezionati,
-                      items: [1, 3, 6, 12].map((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text("$value ${value == 1 ? 'mese' : 'mesi'}"),
-                        );
-                      }).toList(),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          setStateDialog(() {
-                            mesiSelezionati = newValue;
-                          });
-                        }
-                      },
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Quando hai pagato l'abbonamento?"),
+                  const SizedBox(height: 8),
+                  // Selettore della data
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      DateFormat('dd/MM/yyyy').format(dataSelezionata),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ],
-                ),
-              ],
+                    trailing: const Icon(
+                      Icons.calendar_today,
+                      color: Colors.deepPurple,
+                    ),
+                    onTap: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: dataSelezionata,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setStateDialog(() {
+                          dataSelezionata = picked;
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  // Selettore della durata
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Durata:"),
+                      DropdownButton<int>(
+                        value: mesiSelezionati,
+                        items: [1, 3, 6, 12].map((int value) {
+                          return DropdownMenuItem<int>(
+                            value: value,
+                            child: Text(
+                              "$value ${value == 1 ? 'mese' : 'mesi'}",
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (int? newValue) {
+                          if (newValue != null) {
+                            setStateDialog(() {
+                              mesiSelezionati = newValue;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text("Tipo di Abbonamento:"),
+                  const SizedBox(height: 5),
+                  // NUOVO: Selettore del tipo di abbonamento
+                  DropdownButton<TipoAbbonamento>(
+                    isExpanded: true,
+                    value: tipoSelezionato,
+                    items: const [
+                      DropdownMenuItem(
+                        value: TipoAbbonamento.feriale,
+                        child: Text("Feriale - €45 (Lun-Ven)"),
+                      ),
+                      DropdownMenuItem(
+                        value: TipoAbbonamento.completo,
+                        child: Text("Completo - €50 (Lun-Dom)"),
+                      ),
+                    ],
+                    onChanged: (TipoAbbonamento? newValue) {
+                      if (newValue != null) {
+                        setStateDialog(() {
+                          tipoSelezionato = newValue;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -84,10 +117,11 @@ class PaginaAbbonamento extends StatelessWidget {
               ),
               ElevatedButton(
                 onPressed: () {
-                  // Salviamo i dati nel Provider!
+                  // Salviamo i dati nel Provider passando anche il tipo!
                   context.read<AbbonamentoProvider>().registraPagamento(
                     dataSelezionata,
                     mesiSelezionati,
+                    tipoSelezionato,
                   );
                   Navigator.pop(context); // Chiude il popup
                 },
@@ -118,10 +152,21 @@ class PaginaAbbonamento extends StatelessWidget {
         iconaStato = Icons.check_circle;
       } else {
         coloreStato = Colors.orange;
-        testoStato = "Oggi Non Puoi Accedere\n(Solo Lun-Ven)";
+        testoStato = "Oggi Non Puoi Accedere\n(Il tuo piano è solo Lun-Ven)";
         iconaStato = Icons.lock_clock;
       }
     }
+
+    // Prepariamo l'etichetta per i giorni rimanenti
+    String testoGiorni = abbProvider.tipoAbbonamento == TipoAbbonamento.completo
+        ? "Giorni rimanenti totali:"
+        : "Giorni utili rimanenti (Lun-Ven):";
+
+    // Mostriamo che tipo di abbonamento è attivo
+    String etichettaTipo =
+        abbProvider.tipoAbbonamento == TipoAbbonamento.completo
+        ? "Completo (Lun-Dom)"
+        : "Feriale (Lun-Ven)";
 
     return Scaffold(
       body: Center(
@@ -143,6 +188,14 @@ class PaginaAbbonamento extends StatelessWidget {
 
             // Dettagli delle date
             if (pagamento != null) ...[
+              Chip(
+                label: Text(
+                  "Piano: $etichettaTipo",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                backgroundColor: Colors.deepPurple.withOpacity(0.1),
+              ),
+              const SizedBox(height: 15),
               Text(
                 "Ultimo pagamento: ${DateFormat('dd/MM/yyyy').format(pagamento)}",
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
@@ -157,7 +210,7 @@ class PaginaAbbonamento extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                "Giorni utili rimanenti (Lun-Ven): ${abbProvider.giorniRimanenti}",
+                "$testoGiorni ${abbProvider.giorniRimanenti}",
                 style: const TextStyle(fontSize: 16),
               ),
             ] else ...[
