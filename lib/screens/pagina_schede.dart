@@ -116,15 +116,55 @@ class _PaginaSchedeState extends State<PaginaSchede> {
     _salvaSchedeNelDatabase();
   }
 
+  // NUOVO METODO: Gestisce la conferma e l'eliminazione della scheda
+  void _confermaCancellazione(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Elimina Scheda'),
+        content: Text(
+          'Sei sicuro di voler eliminare la scheda "${_mieSchede[index].nome}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context), // Chiude il pop-up senza fare nulla
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _mieSchede.removeAt(
+                  index,
+                ); // Rimuove la scheda dalla lista visiva
+              });
+              _salvaSchedeNelDatabase(); // Aggiorna il database per riflettere la rimozione
+              Navigator.pop(context); // Chiude il pop-up
+
+              // Mostra un piccolo avviso in basso per confermare l'azione
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Scheda eliminata')));
+            },
+            child: const Text(
+              'Elimina',
+              style: TextStyle(
+                color: Colors.red,
+              ), // Testo rosso per indicare un'azione distruttiva
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _mostraDialogoCaricamento() {
     String nomeInserito = "";
-    List<String> muscoliSelezionati =
-        []; // Tiene traccia dei muscoli scelti nel dialog
+    List<String> muscoliSelezionati = [];
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        // StatefulBuilder serve per far funzionare le checkbox nel popup
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: const Text('Nuova Scheda'),
@@ -145,7 +185,6 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
-                  // SELEZIONE MUSCOLI: Creiamo dei "chip" cliccabili
                   Wrap(
                     spacing: 8.0,
                     children: _tuttiIMuscoli.map((muscolo) {
@@ -230,54 +269,66 @@ class _PaginaSchedeState extends State<PaginaSchede> {
                     scheda.isImage ? Icons.image : Icons.picture_as_pdf,
                   ),
                   title: Text(scheda.nome),
-                  // Mostriamo i muscoli taggati come sottotitolo
                   subtitle: Text(
                     scheda.muscoliCoinvolti.isEmpty
                         ? 'Nessun muscolo taggato'
                         : scheda.muscoliCoinvolti.join(', '),
                     style: const TextStyle(fontSize: 12),
                   ),
-                  // BOTTONE COMPLETA ALLENAMENTO
-                  trailing: IconButton(
-                    icon: const Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.green,
-                      size: 30,
-                    ),
-                    tooltip: "Completa Allenamento",
-                    onPressed: () {
-                      if (scheda.muscoliCoinvolti.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Nessun muscolo associato a questa scheda!',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      // CHIAMATA AL PROVIDER!
-                      // Questo aggiornerà automaticamente la Heatmap
-                      context.read<RecuperoProvider>().allenaMuscoli(
-                        scheda.muscoliCoinvolti,
-                      );
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Allenamento completato! Heatmap aggiornata.',
-                          ),
-                          backgroundColor: Colors.green,
+                  // MODIFICA: Ora c'è una "Row" per ospitare due pulsanti (Completa e Cancella)
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize
+                        .min, // Importante per non far occupare tutta la larghezza alla Row
+                    children: [
+                      // Pulsante per completare l'allenamento (Già esistente)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green,
+                          size: 30,
                         ),
-                      );
-                    },
+                        tooltip: "Completa Allenamento",
+                        onPressed: () {
+                          if (scheda.muscoliCoinvolti.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Nessun muscolo associato a questa scheda!',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          context.read<RecuperoProvider>().allenaMuscoli(
+                            scheda.muscoliCoinvolti,
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Allenamento completato! Heatmap aggiornata.',
+                              ),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                      ),
+                      // NUOVO PULSANTE: Elimina Scheda
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 30,
+                        ),
+                        tooltip: "Elimina Scheda",
+                        onPressed: () => _confermaCancellazione(index),
+                      ),
+                    ],
                   ),
                   onTap: () async {
-                    // Chiediamo al sistema operativo di aprire il file
                     final result = await OpenFilex.open(scheda.percorsoFile);
 
-                    // Se qualcosa va storto (es. l'utente ha cancellato il file dalla galleria)
                     if (result.type != ResultType.done && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
