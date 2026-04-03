@@ -60,8 +60,12 @@ class _PaginaSchedeState extends State<PaginaSchede> {
   final List<String> _tuttiIMuscoli = [
     'Pettorali',
     'Dorsali',
+    'Trapezio',
     'Quadricipiti',
+    'Adduttori',
     'Femorali',
+    'Glutei',
+    'Polpacci',
     'Spalle',
     'Bicipiti',
     'Tricipiti',

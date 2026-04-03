@@ -1,127 +1,166 @@
-// lib/screens/pagina_heatmap.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// Importa il provider
 import '../providers/recupero_provider.dart';
 
-class PaginaHeatmap extends StatelessWidget {
+// Importiamo il nuovo pacchetto!
+import 'package:bodychart_heatmap/bodychart_heatmap.dart';
+
+class PaginaHeatmap extends StatefulWidget {
   const PaginaHeatmap({super.key});
 
   @override
+  State<PaginaHeatmap> createState() => _PaginaHeatmapState();
+}
+
+class _PaginaHeatmapState extends State<PaginaHeatmap> {
+  // 1. Teniamo traccia di quali muscoli (con il nome in italiano) l'utente ha selezionato
+  final List<String> _muscoliSelezionatiIT = [];
+
+  // 2. Il nostro "Dizionario": Mappiamo i tuoi muscoli italiani ai nomi in inglese del pacchetto
+  final Map<String, String> _mappaMuscoli = {
+    'Pettorali': 'chest',
+    'Dorsali': 'back',
+    'Trapezio': 'back',
+    'Quadricipiti': 'leg',
+    'Adduttori': 'leg',
+    'Femorali': 'leg',
+    'Glutei': 'glute',
+    'Polpacci': 'calf',
+    'Spalle': 'shoulder',
+    'Bicipiti': 'arm',
+    'Tricipiti': 'arm',
+    'Addominali': 'abs',
+  };
+
+  // Metodo per gestire la selezione dalla legenda
+  void _toggleMuscolo(String muscoloIT) {
+    setState(() {
+      if (_muscoliSelezionatiIT.contains(muscoloIT)) {
+        _muscoliSelezionatiIT.remove(muscoloIT);
+      } else {
+        _muscoliSelezionatiIT.add(muscoloIT);
+      }
+    });
+  }
+
+  // Salva l'allenamento usando i nomi in italiano
+  void _salvaAllenamento() {
+    if (_muscoliSelezionatiIT.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleziona almeno un muscolo dalla legenda!'),
+        ),
+      );
+      return;
+    }
+
+    context.read<RecuperoProvider>().allenaMuscoli(_muscoliSelezionatiIT);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Allenamento registrato con successo!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    setState(() {
+      _muscoliSelezionatiIT.clear();
+    });
+  }
+
+  // 3. Funzione fondamentale: trasforma la nostra lista italiana in un Set inglese per la grafica
+  Set<String> _getMuscoliPerPackage() {
+    Set<String> muscoliInglese = {};
+    for (String muscoloIT in _muscoliSelezionatiIT) {
+      String? nomeInglese = _mappaMuscoli[muscoloIT];
+      if (nomeInglese != null) {
+        muscoliInglese.add(nomeInglese);
+      }
+    }
+    return muscoliInglese;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 1. Ci mettiamo in "ascolto" del provider
-    // context.watch farà ricostruire questa pagina ogni volta che chiami notifyListeners() nel provider
-    final recuperoData = context.watch<RecuperoProvider>();
-    final muscoli = recuperoData.muscoli;
-
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Stato di Recupero Muscolare",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Controlla quali muscoli sono pronti per essere allenati oggi.",
-            ),
-            const SizedBox(height: 20),
+      appBar: AppBar(title: const Text('Heatmap Muscolare')),
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
+          const Text(
+            "Modello 2D",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
 
-            // Griglia visiva
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.5,
+          // 4. IL MODELLO GRAFICO DEL PACCHETTO
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                child: BodyChart(
+                  selectedParts:
+                      _getMuscoliPerPackage(), // Passiamo le traduzioni in inglese
+                  selectedColor:
+                      Colors.blueAccent, // Colore principale (uguale per tutti)
+                  unselectedColor: Colors.grey.shade300, // Colore di base
+                  viewType: BodyViewType.both, // Mostra sia fronte che retro!
+                  width: 250, // Grandezza del disegno
                 ),
-                itemCount: muscoli.length,
-                itemBuilder: (context, index) {
-                  final muscolo = muscoli[index];
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: muscolo.coloreStato.withOpacity(0.2),
-                      border: Border.all(color: muscolo.coloreStato, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            muscolo.nome,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                color: muscolo.coloreStato,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                muscolo.testoStato,
-                                style: TextStyle(
-                                  color: muscolo.coloreStato,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
+          ),
 
-            // 2. Bottoni per simulare le azioni
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          const Divider(thickness: 2),
+
+          // 5. LEGENDA E BOTTONE
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.fitness_center),
-                  label: const Text("Allena Petto e Tricipiti"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    // context.read serve per ESEGUIRE un'azione senza ascoltare (ideale per i bottoni)
-                    context.read<RecuperoProvider>().allenaMuscoli([
-                      'Pettorali',
-                      'Tricipiti',
-                    ]);
-                  },
+                const Text(
+                  "Legenda (Seleziona i muscoli allenati):",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.bedtime),
-                  label: const Text("+1 Giorno"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  // Creiamo un pulsante per ogni voce nel nostro dizionario italiano
+                  children: _mappaMuscoli.keys.map((muscolo) {
+                    final isSelezionato = _muscoliSelezionatiIT.contains(
+                      muscolo,
+                    );
+                    return FilterChip(
+                      label: Text(muscolo),
+                      selected: isSelezionato,
+                      selectedColor: Colors.blueAccent.withOpacity(0.4),
+                      checkmarkColor: Colors.black,
+                      onSelected: (bool selected) {
+                        _toggleMuscolo(muscolo);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _salvaAllenamento,
+                    icon: const Icon(Icons.fitness_center),
+                    label: const Text("Registra Allenamento Manuale"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  onPressed: () {
-                    context.read<RecuperoProvider>().avanzaGiorno();
-                  },
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
