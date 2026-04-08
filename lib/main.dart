@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'providers/recupero_provider.dart';
 import 'screens/main_screen.dart';
 import 'providers/abbonamento_provider.dart';
+import 'providers/timer_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => RecuperoProvider()),
         ChangeNotifierProvider(create: (context) => AbbonamentoProvider()),
+        ChangeNotifierProvider(create: (context) => TimerProvider()),
       ],
       child: const MyGymGuardApp(),
     ),
