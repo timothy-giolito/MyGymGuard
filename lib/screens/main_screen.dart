@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'pagina_abbonamento.dart';
 import 'pagina_timer.dart';
 import 'pagina_schede.dart';
-import 'pagina_dashboard.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,7 +19,6 @@ class _MainScreenState extends State<MainScreen> {
     const PaginaAbbonamento(),
     const PaginaTimer(),
     const PaginaSchede(),
-    const PaginaDashboard(),
   ];
 
   // Funzione che cambia la pagina quando tocchi un'icona
@@ -52,10 +50,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Timer'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Schede'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.accessibility_new),
-            label: 'Dashboard',
-          ),
         ],
       ),
     );
