@@ -193,7 +193,7 @@ class PaginaAbbonamento extends StatelessWidget {
                   "Piano: $etichettaTipo",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
               ),
               const SizedBox(height: 15),
               Text(

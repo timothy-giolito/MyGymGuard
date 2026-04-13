@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'services/notification_service.dart';
 
 import 'providers/recupero_provider.dart';
 import 'screens/main_screen.dart';
@@ -9,9 +10,12 @@ import 'providers/abbonamento_provider.dart';
 import 'providers/timer_provider.dart';
 
 void main() async {
+
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('myGymBox');
+
+  await NotificationService.init();
 
   runApp(
     // Usiamo MultiProvider per gestire più "cervelli" nell'app

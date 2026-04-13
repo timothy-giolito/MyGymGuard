@@ -46,6 +46,8 @@ dependencies:
   intl: ^0.20.2
   flutter_svg: ^2.2.4
   bodychart_heatmap: ^1.1.0
+  flutter_local_notifications: ^21.0.0
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

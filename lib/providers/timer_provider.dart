@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../services/notification_service.dart';
 
 class TimerProvider extends ChangeNotifier {
   int _secondiIniziali = 0;
@@ -28,6 +29,7 @@ class TimerProvider extends ChangeNotifier {
   }
 
   void avviaTimer() {
+    NotificationService.mostraTimer(secondiRimanenti);
     if (_inEsecuzione) return;
     _inEsecuzione = true;
     _mostraDialogo = false;
@@ -46,6 +48,7 @@ class TimerProvider extends ChangeNotifier {
   }
 
   void fermaTimer() {
+    NotificationService.cancellaTimer();
     _timer?.cancel();
     _inEsecuzione = false;
     notifyListeners();
